@@ -1,6 +1,9 @@
 #import <Foundation/Foundation.h>
 #import <CoreBluetooth/CoreBluetooth.h>
 
+#import <objc/runtime.h>
+
+
 @interface BluetoothManager : NSObject <CBCentralManagerDelegate, CBPeripheralDelegate>
 
 @property (strong, nonatomic) CBCentralManager *centralManager;
@@ -19,6 +22,18 @@
         // all the delegate callbacks are on the main thread.
         self.centralManager = [[CBCentralManager alloc] initWithDelegate:self queue:dispatch_get_main_queue()];
     }
+
+    unsigned int i;
+    unsigned int method_count = 0;
+    Method * methods = class_copyMethodList(object_getClass(self), &method_count);
+    NSLog(@"%d methods", method_count);
+    for(i = 0; i < method_count; i++) {
+            NSLog(@"Method Name: %s", sel_getName(method_getName(methods[i])));
+            NSLog(@"Method Signature: %s", method_getDescription(methods[i])->types);
+    }
+
+    free(methods);
+
     return self;
 }
 

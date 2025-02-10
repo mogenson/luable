@@ -13,8 +13,11 @@ void CFRunLoopRun(void);
 void NSLog(id, ...);
 ]])
 
+-- constants
 local CBManagerStatePoweredOn = ffi.new("NSInteger", 5)
+local YES = ffi.new("BOOL", 1)
 
+-- globals
 local central_manager = nil
 
 local function NSString(str)
@@ -34,13 +37,14 @@ end
 
 local function centralManager_didDiscoverPeripheral_advertisementData_RSSI_(self, cmd, central, peripheral,
                                                                             advertisement_data, rssi)
-    local ch8 = NSString("CH-8")
+    -- local ch8 = NSString("CH-8")
+    local ch8 = NSString("Govee_H6076_1959")
     local name = peripheral.name
     C.NSLog(NSString("discovered peripheral %@"), name)
-    -- if (name:isEqualToString_(ch8)) then
-    --     C.NSLog(NSString("found target peripheral"))
-    --     central_manager:stopScan()
-    -- end
+    if name and name:isEqualToString_(ch8) == YES then
+        C.NSLog(NSString("found %@, stopping scan"), ch8)
+        central_manager:stopScan()
+    end
 end
 
 local function makeDelegate()

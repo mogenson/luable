@@ -188,7 +188,7 @@ local function msgSend(receiver, selector, ...)
     local signature = table.concat(signature)
 
     -- print(receiver, selector, signature)
-    return ffi.cast(signature, C.objc_msgSend)(unpack(call_args))
+    return ptr(ffi.cast(signature, C.objc_msgSend)(unpack(call_args)))
 end
 
 ---load a Framework

@@ -27,46 +27,62 @@ local function NSString(str)
     return objc.NSString:stringWithUTF8String(str)
 end
 
-local function centralManagerDidUpdateState_(self, cmd, central)
+local function didUpdateState(self, cmd, central)
     local state = central.state
     C.NSLog(NSString("Central state %d"), state)
     if (state == CBManagerStatePoweredOn) then
         C.NSLog(NSString("Central manager powered on, starting scan"))
-        central:scanForPeripheralsWithServices_options_(nil, nil)
+        central:scanForPeripheralsWithServices_options(nil, nil)
     end
 end
 
-local function centralManager_didDiscoverPeripheral_advertisementData_RSSI_(self, cmd, central, peripheral,
-                                                                            advertisement_data, rssi)
+local function didDiscoverPeripheral(self, cmd, central, peripheral,
+                                     advertisement_data, rssi)
     -- local ch8 = NSString("CH-8")
     local ch8 = NSString("Foldy Boy")
     local name = peripheral.name
     C.NSLog(NSString("Discovered peripheral: %@"), name)
-    if name and name:isEqualToString_(ch8) == YES then
+    if name and name:isEqualToString(ch8) == YES then
         C.NSLog(NSString("Matched name: %@, stopping scan and connecting"), ch8)
         App.peripheral = peripheral:retain() -- connect will not succeed if peripheral is dropped
         central:stopScan()
-        central:connectPeripheral_options_(peripheral, nil)
+        central:connectPeripheral_options(peripheral, nil)
     end
 end
 
-local function centralManager_didConnectPeripheral_(self, cmd, central, peripheral)
+local function didConnectPeripheral(self, cmd, central, peripheral)
     C.NSLog(NSString("Connected to peripheral: %@"), peripheral.name)
     peripheral.delegate = App.delegate
+    peripheral:discoverServices(nil)
 end
 
-local function centralManager_didFailToConnectPeripheral_error_(self, cmd, centrl, peripheral, error)
+local function didFailToConnectPeripheral(self, cmd, central, peripheral, error)
     C.NSLog(NSString("Failed to connect to peripheral: %@, Error: %@"), peripheral.name, error)
+end
+
+local function didDiscoverServices(self, cmd, peripheral, error)
+    if objc.ptr(error) then
+        C.NSLog(NSString("Error discovering services: %@"), error)
+        return
+    end
+
+    C.NSLog(NSString("Discovered services:"))
+    local services = peripheral.services -- NSArray<CBService*>*
+    for i = 0, tonumber(services.count) - 1 do
+        local service = services:objectAtIndex(i)
+        C.NSLog(NSString("  %@"), service.UUID)
+    end
 end
 
 local function makeDelegate()
     local delegate_class = objc.newClass("CentralManagerDelegate")
-    objc.addMethod(delegate_class, "centralManagerDidUpdateState:", "v@:@", centralManagerDidUpdateState_)
-    objc.addMethod(delegate_class, "centralManager:didDiscoverPeripheral:advertisementData:RSSI:", "v@:@@@@",
-        centralManager_didDiscoverPeripheral_advertisementData_RSSI_)
-    objc.addMethod(delegate_class, "centralManager:didConnectPeripheral:", "v@:@@", centralManager_didConnectPeripheral_)
-    objc.addMethod(delegate_class, "centralManager:didFailToConnectPeripheral:error:", "v@:@@@",
-        centralManager_didFailToConnectPeripheral_error_)
+    delegate_class:addMethod("centralManagerDidUpdateState:", "v@:@", didUpdateState)
+    delegate_class:addMethod("centralManager:didDiscoverPeripheral:advertisementData:RSSI:", "v@:@@@@",
+        didDiscoverPeripheral)
+    delegate_class:addMethod("centralManager:didConnectPeripheral:", "v@:@@", didConnectPeripheral)
+    delegate_class:addMethod("centralManager:didFailToConnectPeripheral:error:", "v@:@@@",
+        didFailToConnectPeripheral)
+    delegate_class:addMethod("peripheral:didDiscoverServices:", "v@:@@", didDiscoverServices)
     return objc.CentralManagerDelegate:alloc():init()
 end
 
@@ -74,7 +90,7 @@ end
 local function main()
     App.delegate = makeDelegate()
     local queue = ffi.cast("id", C._dispatch_main_q)
-    local central = objc.CBCentralManager:alloc():initWithDelegate_queue_(App.delegate, queue)
+    local central = objc.CBCentralManager:alloc():initWithDelegate_queue(App.delegate, queue)
 
     C.CFRunLoopRun()
 end

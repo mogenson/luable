@@ -147,16 +147,16 @@ local function msgSend(receiver, selector, ...)
     local function convert(lua_var, c_type)
         if type(lua_var) == "string" then
             if c_type == "SEL" then
-                -- print("creating SEL from " .. lua_var)
                 return sel(lua_var)
             elseif c_type == "char*" then
-                -- print("creating char* from " .. lua_var)
                 return ffi.cast(c_type, lua_var)
             end
         elseif type(lua_var) == "cdata" and c_type == "id" and ffi.istype("Class", lua_var) then
             -- sometimes method signatures use id instead of Class
-            -- print("casting " .. tostring(lua_var) .. " to id")
             return ffi.cast(c_type, lua_var)
+        elseif lua_var == nil then
+            -- convert to a null pointer
+            return ffi.new(c_type)
         end
         return lua_var -- no conversion necessary
     end
@@ -164,7 +164,7 @@ local function msgSend(receiver, selector, ...)
     if type(receiver) == "string" then receiver = cls(receiver) end
     local selector = sel(selector)
     local method = getMethod(receiver, selector)
-    local call_args = { receiver, selector, ... }
+    local call_args = { n = select("#", ...) + 2, receiver, selector, ... }
     local char_ptr = assert(ptr(C.method_copyReturnType(method)))
     local objc_type = ffi.string(char_ptr)
     C.free(char_ptr)
@@ -174,7 +174,7 @@ local function msgSend(receiver, selector, ...)
     table.insert(signature, "(*)(")
 
     local num_method_args = C.method_getNumberOfArguments(method)
-    assert(num_method_args == #call_args)
+    assert(num_method_args == call_args.n)
     for i = 1, num_method_args do
         char_ptr = assert(ptr(C.method_copyArgumentType(method, i - 1)))
         objc_type = ffi.string(char_ptr)
@@ -187,8 +187,7 @@ local function msgSend(receiver, selector, ...)
     table.insert(signature, ")")
     local signature = table.concat(signature)
 
-    -- print(receiver, selector, signature)
-    return ptr(ffi.cast(signature, C.objc_msgSend)(unpack(call_args)))
+    return ptr(ffi.cast(signature, C.objc_msgSend)(unpack(call_args, 1, call_args.n)))
 end
 
 ---load a Framework
@@ -231,7 +230,6 @@ local function addMethod(class, selector, types, func)
     end
     table.insert(signature, ")")
     local signature = table.concat(signature)
-    -- print(class, selector, signature, types)
 
     local imp = ffi.cast("IMP", ffi.cast(signature, func))
     assert(C.class_addMethod(class, selector, imp, types) == 1)

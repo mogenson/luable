@@ -32,9 +32,7 @@ local function centralManagerDidUpdateState_(self, cmd, central)
     C.NSLog(NSString("Central state %d"), state)
     if (state == CBManagerStatePoweredOn) then
         C.NSLog(NSString("Central manager powered on, starting scan"))
-        local services = ffi.new("id") -- null pointer
-        local options = ffi.new("id")  -- null pointer
-        central:scanForPeripheralsWithServices_options_(services, options)
+        central:scanForPeripheralsWithServices_options_(nil, nil)
     end
 end
 
@@ -48,8 +46,7 @@ local function centralManager_didDiscoverPeripheral_advertisementData_RSSI_(self
         C.NSLog(NSString("Matched name: %@, stopping scan and connecting"), ch8)
         App.peripheral = peripheral:retain() -- connect will not succeed if peripheral is dropped
         central:stopScan()
-        local options = ffi.new("id")        -- null pointer
-        central:connectPeripheral_options_(peripheral, options)
+        central:connectPeripheral_options_(peripheral, nil)
     end
 end
 

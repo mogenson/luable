@@ -136,6 +136,34 @@
 int main(int argc, const char * argv[]) {
     @autoreleasepool {
         BluetoothManager *manager = [[BluetoothManager alloc] init];
+
+        unsigned int count;
+        objc_property_t *properties = class_copyPropertyList([BluetoothManager class], &count);
+
+        NSLog(@"Properties of BluetoothManager:");
+        for (unsigned int i = 0; i < count; i++) {
+            objc_property_t property = properties[i];
+            const char *propertyName = property_getName(property);
+            const char *propertyAttributes = property_getAttributes(property);
+
+            NSLog(@"  Name: %s", propertyName);
+
+            // Decode and print property attributes (type, ownership, etc.)
+            NSLog(@"    Attributes: %s", propertyAttributes);
+
+            // More detailed attribute decoding (Optional, but useful)
+            char *attributeString = strdup(propertyAttributes); // Make a copy for strtok
+            char *attribute = strtok(attributeString, ",");
+
+            while (attribute != NULL) {
+                NSLog(@"      - %@", [NSString stringWithUTF8String:attribute]);
+                attribute = strtok(NULL, ",");
+            }
+            free(attributeString); // Free the duplicated string
+        }
+
+        free(properties); // Important: Free the allocated property list
+
         CFRunLoopRun();
     }
     return 0;

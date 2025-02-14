@@ -66,9 +66,9 @@ local type_encoding = setmetatable({
     ["@"] = "id",
     ["#"] = "Class",
     [":"] = "SEL",
-    ["^"] = "void*",
     ["?"] = "void",
-    ["r*"] = "char*",
+    ["r*"] = "const char*",
+    ["r^v"] = "const void*",
 }, {
     __index = function(_, k)
         assert(type(k) == "string" and #k > 2)

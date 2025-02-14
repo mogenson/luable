@@ -135,6 +135,8 @@
 
 int main(int argc, const char * argv[]) {
     @autoreleasepool {
+
+        NSLog(@"CBCharacteristicWriteWithoutResponse = %ld", CBCharacteristicWriteWithoutResponse);
         BluetoothManager *manager = [[BluetoothManager alloc] init];
 
         unsigned int count;

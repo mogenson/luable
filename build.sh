@@ -7,3 +7,5 @@ clang \
     -fobjc-arc \
     -x objective-c \
     bluetooth_example.m
+
+clang -fobjc-arc midi.m -o midi -framework CoreMIDI -framework Foundation

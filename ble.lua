@@ -3,6 +3,7 @@
 local objc = require("objc")
 objc.loadFramework("Foundation")
 objc.loadFramework("CoreBluetooth")
+objc.loadFramework("CoreMIDI")
 
 local ffi = require("ffi")
 local C = ffi.C
@@ -11,6 +12,13 @@ ffi.cdef([[
 struct dispatch_queue_s _dispatch_main_q; // global from dispatch/queue.h
 void CFRunLoopRun(void);
 void NSLog(id, ...);
+]])
+
+-- CoreMIDI
+ffi.cdef([[
+typedef uint32_t MIDIObjectRef;
+typedef MIDIObjectRef MIDIClientRef;
+//OSStatus MIDIClientCreate(CFStringRef name, MIDINotifyProc notifyProc, void *notifyRefCon, MIDIClientRef *outClient);
 ]])
 
 -- utilities
@@ -30,6 +38,7 @@ local PeripheralName = NSString("Foldy Boy")
 local App = {
     delegate = nil,
     peripheral = nil,
+    characteristic = nil,
 }
 
 local function didUpdateState(self, cmd, central)
@@ -97,6 +106,7 @@ local function didDiscoverCharacteristics(self, cmd, peripheral, service, error)
         C.NSLog(NSString("  %@"), characteristic.UUID)
         if characteristic.UUID:isEqual(MidiUuid) == YES then
             C.NSLog(NSString("Found MIDI characteristic"))
+            App.characteristic = characteristic:retain()
             local bytes = ffi.cast("const void*", ffi.new("uint8_t[5]", { 0x80, 0x80, 0x80, 0x3e, 0x7f }))
             local length = ffi.new("NSUInteger", 5)
             local data = objc.NSData:dataWithBytes_length(bytes, length)
@@ -123,10 +133,12 @@ local function makeDelegate()
 end
 
 local function main()
-    App.delegate = makeDelegate()
-    local queue = ffi.cast("id", C._dispatch_main_q)
-    local central = objc.CBCentralManager:alloc():initWithDelegate_queue(App.delegate, queue)
-    C.CFRunLoopRun()
+    -- App.delegate = makeDelegate()
+    -- local queue = ffi.cast("id", C._dispatch_main_q)
+    -- local central = objc.CBCentralManager:alloc():initWithDelegate_queue(App.delegate, queue)
+    --C.CFRunLoopRun()
+
+    print("done")
 end
 
 main()

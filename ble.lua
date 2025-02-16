@@ -17,11 +17,20 @@ void NSLog(id, ...);
 
 -- CoreMIDI
 ffi.cdef([[
+typedef CFIndex ItemCount;
 typedef uint32_t MIDIObjectRef;
 typedef MIDIObjectRef MIDIClientRef;
+typedef MIDIObjectRef MIDIPortRef;
+typedef MIDIObjectRef MIDIEndpointRef;
 typedef struct MIDINotification MIDINotification;
+typedef struct MIDIPacketList MIDIPacketList;
 typedef void (*MIDINotifyProc)(const MIDINotification *message, void *refCon);
+typedef void (*MIDIReadProc)(const MIDIPacketList *pktlist, void *readProcRefCon, void *srcConnRefCon);
 OSStatus MIDIClientCreate(CFStringRef name, MIDINotifyProc notifyProc, void *notifyRefCon, MIDIClientRef *outClient);
+OSStatus MIDIInputPortCreate(MIDIClientRef client, CFStringRef portName, MIDIReadProc readProc, void *refCon, MIDIPortRef *outPort);
+ItemCount MIDIGetNumberOfSources(void);
+MIDIEndpointRef MIDIGetSource(ItemCount sourceIndex0);
+OSStatus MIDIPortConnectSource(MIDIPortRef port, MIDIEndpointRef source, void *connRefCon);
 ]])
 
 -- utilities
@@ -135,16 +144,38 @@ local function makeDelegate()
     return objc.CentralManagerDelegate:alloc():init()
 end
 
+local function midi_input_callback(packet_list, ref_conn, conn)
+    print("midi_input_callback called")
+end
+
 local function main()
     -- App.delegate = makeDelegate()
     -- local queue = ffi.cast("id", C._dispatch_main_q)
     -- local central = objc.CBCentralManager:alloc():initWithDelegate_queue(App.delegate, queue)
-    --C.CFRunLoopRun()
+
+    if tonumber(C.MIDIGetNumberOfSources()) == 0 then
+        print("No MIDI input sources")
+        return
+    end
 
     local midi_client = ffi.new("MIDIClientRef[1]", 0)
-    local name = cf.CFString("LuaClient")
-    cf.CFShow(name)
-    assert(tonumber(C.MIDIClientCreate(name, nil, nil, midi_client)) == 0)
+    local client_name = cf.CFString("LuaClient")
+    assert(tonumber(C.MIDIClientCreate(client_name, nil, nil, midi_client)) == 0)
+
+    local midi_port = ffi.new("MIDIPortRef[1]", 0)
+    local port_name = cf.CFString("LuaPort")
+    local callback = ffi.cast("MIDIReadProc", midi_input_callback)
+    assert(tonumber(C.MIDIInputPortCreate(midi_client[0], port_name, callback, nil, midi_port)) == 0)
+
+    local midi_source = C.MIDIGetSource(0)
+    if midi_source == 0 then
+        print("Invalid MIDI source")
+        return
+    end
+
+    assert(tonumber(C.MIDIPortConnectSource(midi_port[0], midi_source, nil)) == 0)
+
+    cf.CFRunLoopRun()
 end
 
 main()

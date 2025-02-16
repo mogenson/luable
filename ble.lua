@@ -18,12 +18,23 @@ void NSLog(id, ...);
 -- CoreMIDI
 ffi.cdef([[
 typedef CFIndex ItemCount;
+typedef uint64_t MIDITimeStamp;
 typedef uint32_t MIDIObjectRef;
 typedef MIDIObjectRef MIDIClientRef;
 typedef MIDIObjectRef MIDIPortRef;
 typedef MIDIObjectRef MIDIEndpointRef;
 typedef struct MIDINotification MIDINotification;
-typedef struct MIDIPacketList MIDIPacketList;
+#pragma pack(push, 4)
+typedef struct MIDIPacket {
+    MIDITimeStamp timeStamp;
+    uint16_t length;
+    uint8_t data[256];
+} MIDIPacket;
+typedef struct MIDIPacketList {
+    uint32_t numPackets;
+    MIDIPacket packet[1];
+} MIDIPacketList;
+#pragma pack(pop)
 typedef void (*MIDINotifyProc)(const MIDINotification *message, void *refCon);
 typedef void (*MIDIReadProc)(const MIDIPacketList *pktlist, void *readProcRefCon, void *srcConnRefCon);
 OSStatus MIDIClientCreate(CFStringRef name, MIDINotifyProc notifyProc, void *notifyRefCon, MIDIClientRef *outClient);
@@ -145,7 +156,10 @@ local function makeDelegate()
 end
 
 local function midi_input_callback(packet_list, ref_conn, conn)
-    print("midi_input_callback called")
+    for i = 0, tonumber(packet_list.numPackets) - 1 do
+        local data = objc.NSData:dataWithBytes_length(packet_list.packet[i].data, packet_list.packet[i].length)
+        C.NSLog(NSString("MIDI data %@"), data)
+    end
 end
 
 local function main()
@@ -158,10 +172,12 @@ local function main()
         return
     end
 
+    print("Creating MIDI client")
     local midi_client = ffi.new("MIDIClientRef[1]", 0)
     local client_name = cf.CFString("LuaClient")
     assert(tonumber(C.MIDIClientCreate(client_name, nil, nil, midi_client)) == 0)
 
+    print("Creating MIDI input port")
     local midi_port = ffi.new("MIDIPortRef[1]", 0)
     local port_name = cf.CFString("LuaPort")
     local callback = ffi.cast("MIDIReadProc", midi_input_callback)
@@ -173,6 +189,7 @@ local function main()
         return
     end
 
+    print("Connecting MIDI source to MIDI port")
     assert(tonumber(C.MIDIPortConnectSource(midi_port[0], midi_source, nil)) == 0)
 
     cf.CFRunLoopRun()

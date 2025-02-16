@@ -22,7 +22,7 @@ int main(int argc, const char * argv[]) {
     @autoreleasepool {
 
         // Initialize Core MIDI
-        MIDIClientRef client = NULL;
+        MIDIClientRef client = 0;
         OSStatus err = MIDIClientCreate(CFSTR("My MIDI Client"), NULL, NULL, &client);
         if (err != noErr) {
             NSLog(@"Error creating MIDI client: %d", err);
@@ -30,7 +30,7 @@ int main(int argc, const char * argv[]) {
         }
 
         // Create a MIDI input port
-        MIDIPortRef inputPort = NULL;
+        MIDIPortRef inputPort = 0;
         err = MIDIInputPortCreate(client, CFSTR("My MIDI Input Port"), MyMIDIInputCallback, NULL, &inputPort);
         if (err != noErr) {
             NSLog(@"Error creating MIDI input port: %d", err);

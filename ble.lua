@@ -1,6 +1,7 @@
 #!/usr/bin/env luajit
 
 local objc = require("objc")
+local cf = require("cf")
 objc.loadFramework("Foundation")
 objc.loadFramework("CoreBluetooth")
 objc.loadFramework("CoreMIDI")
@@ -18,7 +19,9 @@ void NSLog(id, ...);
 ffi.cdef([[
 typedef uint32_t MIDIObjectRef;
 typedef MIDIObjectRef MIDIClientRef;
-//OSStatus MIDIClientCreate(CFStringRef name, MIDINotifyProc notifyProc, void *notifyRefCon, MIDIClientRef *outClient);
+typedef struct MIDINotification MIDINotification;
+typedef void (*MIDINotifyProc)(const MIDINotification *message, void *refCon);
+OSStatus MIDIClientCreate(CFStringRef name, MIDINotifyProc notifyProc, void *notifyRefCon, MIDIClientRef *outClient);
 ]])
 
 -- utilities
@@ -138,7 +141,10 @@ local function main()
     -- local central = objc.CBCentralManager:alloc():initWithDelegate_queue(App.delegate, queue)
     --C.CFRunLoopRun()
 
-    print("done")
+    local midi_client = ffi.new("MIDIClientRef[1]", 0)
+    local name = cf.CFString("LuaClient")
+    cf.CFShow(name)
+    assert(tonumber(C.MIDIClientCreate(name, nil, nil, midi_client)) == 0)
 end
 
 main()

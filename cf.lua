@@ -3,6 +3,7 @@ local C = ffi.C
 
 ffi.cdef([[
 typedef const void *CFTypeRef;
+typedef int32_t OSStatus;
 typedef struct __CFAllocator *CFAllocatorRef;
 typedef struct __CFString *CFStringRef;
 typedef uint32_t CFStringEncoding;

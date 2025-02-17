@@ -53,8 +53,8 @@ local CBManagerStatePoweredOn = ffi.new("NSInteger", 5)
 local CBCharacteristicWriteWithoutResponse = ffi.new("NSInteger", 1)
 local YES = ffi.new("BOOL", 1)
 local MidiUuid = objc.CBUUID:UUIDWithString(NSString("7772E5DB-3868-4112-A1A9-F2669D106BF3"))
---local PeripheralName = NSString("CH-8")
-local PeripheralName = NSString("Foldy Boy")
+local PeripheralName = NSString("CH-8")
+--local PeripheralName = NSString("Foldy Boy")
 local MidiPacket = { 0x80, 0x80, 0x00, 0x00, 0x00 }
 
 -- globals
@@ -130,11 +130,6 @@ local function didDiscoverCharacteristics(self, cmd, peripheral, service, error)
         if characteristic.UUID:isEqual(MidiUuid) == YES then
             C.NSLog(NSString("Found MIDI characteristic"))
             App.characteristic = characteristic:retain()
-            local bytes = ffi.cast("const void*", ffi.new("uint8_t[5]", { 0x80, 0x80, 0x80, 0x3e, 0x7f }))
-            local length = ffi.new("NSUInteger", 5)
-            local data = objc.NSData:dataWithBytes_length(bytes, length)
-            C.NSLog(NSString("Writing %@ to characteristic %@"), data, characteristic)
-            peripheral:writeValue_forCharacteristic_type(data, characteristic, CBCharacteristicWriteWithoutResponse)
             break
         end
     end
@@ -171,14 +166,16 @@ local function midi_input_callback(packet_list, ref_conn, conn)
             ffi.new("NSUInteger", 5))
 
         C.NSLog(NSString("MIDI data %@"), data)
+
+        if App.peripheral and App.characteristic then
+            C.NSLog(NSString("Writing to characteristic %@"), App.characteristic)
+            App.peripheral:writeValue_forCharacteristic_type(data, App.characteristic,
+                CBCharacteristicWriteWithoutResponse)
+        end
     end
 end
 
 local function main()
-    -- App.delegate = makeDelegate()
-    -- local queue = ffi.cast("id", C._dispatch_main_q)
-    -- local central = objc.CBCentralManager:alloc():initWithDelegate_queue(App.delegate, queue)
-
     if tonumber(C.MIDIGetNumberOfSources()) == 0 then
         print("No MIDI input sources")
         return
@@ -203,6 +200,10 @@ local function main()
 
     print("Connecting MIDI source to MIDI port")
     assert(tonumber(C.MIDIPortConnectSource(midi_port[0], midi_source, nil)) == 0)
+
+    App.delegate = makeDelegate()
+    local queue = ffi.cast("id", C._dispatch_main_q)
+    local central = objc.CBCentralManager:alloc():initWithDelegate_queue(App.delegate, queue)
 
     cf.CFRunLoopRun()
 end

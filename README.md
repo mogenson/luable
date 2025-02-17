@@ -24,3 +24,29 @@ Use the LuaJIT FFI extension to wrap the CoreFoundation Framework C API for stri
 ## ble
 
 Main application entry point.
+
+# faq
+
+*Why Lua?*
+
+I like Lua.
+
+*Why LuaJIT?*
+
+I think its cool that you can hook into core MacOS frameworks dynamically with FFI. There's something exciting about concatenating strings to make a function signature, looking up a function pointer, firing away and hoping it works.
+
+*Why MacOS only?*
+
+I only own a MacBook.
+
+*Would this be easier in Swift?*
+
+Yes.
+
+*Would this be easier in Objective-C?*
+
+Yes.
+
+*Would this be easier in C?*
+
+Maybe not! There would be a lot of tedious type casting. I think Lua is better than C for this task.

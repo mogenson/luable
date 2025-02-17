@@ -11,7 +11,6 @@ local C = ffi.C
 
 ffi.cdef([[
 struct dispatch_queue_s _dispatch_main_q; // global from dispatch/queue.h
-void CFRunLoopRun(void);
 void NSLog(id, ...);
 ]])
 
@@ -56,6 +55,7 @@ local YES = ffi.new("BOOL", 1)
 local MidiUuid = objc.CBUUID:UUIDWithString(NSString("7772E5DB-3868-4112-A1A9-F2669D106BF3"))
 --local PeripheralName = NSString("CH-8")
 local PeripheralName = NSString("Foldy Boy")
+local MidiPacket = { 0x80, 0x80, 0x00, 0x00, 0x00 }
 
 -- globals
 local App = {
@@ -157,7 +157,19 @@ end
 
 local function midi_input_callback(packet_list, ref_conn, conn)
     for i = 0, tonumber(packet_list.numPackets) - 1 do
-        local data = objc.NSData:dataWithBytes_length(packet_list.packet[i].data, packet_list.packet[i].length)
+        if tonumber(packet_list.packet[i].length) ~= 3 then
+            print("Expecting a Midi Packet with length of 3")
+            return
+        end
+
+        for j = 0, 2 do -- copy data
+            MidiPacket[3 + j] = packet_list.packet[i].data[j]
+        end
+
+        local data = objc.NSData:dataWithBytes_length(
+            ffi.cast("const void*", ffi.new("uint8_t[5]", MidiPacket)),
+            ffi.new("NSUInteger", 5))
+
         C.NSLog(NSString("MIDI data %@"), data)
     end
 end
